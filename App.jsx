@@ -1,21 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Editor from './components/Editor';
 import Split from 'react-split';
 import { nanoid } from 'nanoid';
+// onSnapshot listener listens for changes in the firestore database
+import { onSnapshot } from 'firebase/firestore';
+import { notesCollection } from './firebase.js';
 
 export default function App() {
-  const [notes, setNotes] = React.useState(
+  const [notes, setNotes] = useState(
     () => JSON.parse(localStorage.getItem('notes')) || []
   );
-  const [currentNoteId, setCurrentNoteId] = React.useState(notes[0]?.id || '');
+  const [currentNoteId, setCurrentNoteId] = useState(
+    (notes[0] && notes[0].id) || ''
+  );
 
   const currentNote =
     notes.find((note) => note.id === currentNoteId) || notes[0];
 
-  React.useEffect(() => {
-    localStorage.setItem('notes', JSON.stringify(notes));
-  }, [notes]);
+  useEffect(() => {
+    // OLD CODE using local storage
+    //     localStorage.setItem('notes', JSON.stringify(notes));
+    //   }, [notes]);
+
+    //NEW CODE using firestore database from firebase
+    const unsubscribe = onSnapshot(notesCollection, function (snapshot) {
+      //sync up our local notes array with the snapshot data
+      console.log('this ');
+    });
+    // we don't want a listener to hang out in the background if someone closes tab (memory leak)
+    // must return function to unsubscribe (clean up the side effects)
+    return unsubscribe;
+  }, []);
 
   function createNewNote() {
     const newNote = {
@@ -46,14 +62,6 @@ export default function App() {
     event.stopPropagation();
     setNotes((oldNotes) => oldNotes.filter((note) => note.id !== noteId));
   }
-
-  //   function findCurrentNote() {
-  //     return (
-  //       notes.find((note) => {
-  //         return note.id === currentNoteId;
-  //       }) || notes[0]
-  //     );
-  //   }
 
   return (
     <main>
